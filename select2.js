@@ -144,7 +144,7 @@ class Select2 extends HTMLElement {
         const options = this.shadowRoot.querySelector('.options');
 
         container.addEventListener('blur', (e) => {
-            if (e.relatedTarget?.className !== 'input')
+            if (e.relatedTarget?.className !== 'input') // don't remove when target is input and clicked
                 options.classList.remove('show');
         });
 
@@ -166,7 +166,7 @@ class Select2 extends HTMLElement {
             value.innerText = '';
             this.value = '';
             [...options.childNodes]
-                .filter((a) => a.className == 'option selected')
+                .filter((a) => a.classList.contains('selected'))
                 .forEach((elem) => {
                     elem?.classList.remove('selected');
                 });
@@ -199,7 +199,7 @@ class Select2 extends HTMLElement {
             e.stopPropagation();
             const option = this.shadowRoot.querySelectorAll('.option');
             if (e.target.tagName.toLowerCase() === 'li') {
-                [...option].filter((a) => a.className === 'option selected')
+                [...option].filter((a) => a.classList.contains('selected'))
                     .forEach((elem) => {
                         elem?.classList.remove('selected');
                     });
