@@ -14,48 +14,45 @@
       -- url: to load data from server
 */
 
-const createSelect2 = (data, config = {}, that) => {
-    const createContainer = () => {
+const select2 =  {
+    createContainer: () => {
         const container = document.createElement('div');
         container.className = 'container';
         container.setAttribute('tabindex', 0);
-
         return container;
-    };
+    },
 
-    const createValue = (data, that = {}) => {
+    createValue:  (data, that = {}) => {
         const val = document.createElement('span');
         val.className = 'value';
         val.value = data?.[0]?.value;
         that.value = data?.[0]?.value;
         val.textContent = data?.[0]?.value || 'Select';
-
         return val;
-    };
+    },
 
-    const createButton = () => {
+    createButton: () => {
         const button = document.createElement('button');
         button.className = 'cross-btn';
         button.textContent = 'x';
-
         return button;
-    };
+    },
 
-    const createDivider = () => {
+    createDivider: () => {
         const divider = document.createElement('div');
         divider.className = 'divider';
 
         return divider;
-    };
+    },
 
-    const createCaret = () => {
+    createCaret: () => {
         const caret = document.createElement('div');
         caret.className = 'caret';
 
         return caret;
-    };
+    },
 
-    const createList = (data, config) => {
+    createList: (data, config) => {
         // create ul
         const ul = document.createElement('ul');
         ul.className = 'options';
@@ -70,67 +67,80 @@ const createSelect2 = (data, config = {}, that) => {
 
         //create data list
         for (i in data) {
-            const li = createLi(data[i].key, data[i].value)
+            const li = select2.createLi(data[i].key, data[i].value)
             ul.appendChild(li);
         }
         return ul;
-    };
+    },
 
-    const createLi = (key, value) => {
+    createLi: (key, value) => {
         const li = document.createElement('li');
         li.className = 'option';
         li.setAttribute('label', key);
         li.val = value;
         li.textContent = value;
-
         return li;
+    },
+
+    createStyle: (href = undefined) => {
+        const style = document.createElement('link');
+        style.setAttribute('rel', 'stylesheet');
+        style.setAttribute('href', href || 'select2.css');
+        return style;
+    },
+
+    createSelect2: (data, config, that={}) => {
+        const container = select2.createContainer();
+        container.appendChild(select2.createValue(data, that));
+        container.appendChild(select2.createButton());
+        container.appendChild(select2.createDivider());
+        container.appendChild(select2.createCaret());
+        container.appendChild(select2.createList(data, config));
+        return container;
     }
-
-    const container = createContainer();
-    container.appendChild(createValue(data, that));
-    container.appendChild(createButton());
-    container.appendChild(createDivider());
-    container.appendChild(createCaret());
-    container.appendChild(createList(data, config));
-
-    return { container, createLi, createList };
 };
 
 class Select2 extends HTMLElement {
     constructor() {
         super();
-
         const shadow = this.attachShadow({ mode: 'open' });
+        this.initialise(this);
+    }
 
-        const style = document.createElement('link');
-        style.setAttribute('rel', 'stylesheet');
-        style.setAttribute('href', 'select2.css');
-        shadow.appendChild(style);
+    initialise(that) {
+        // Appends the style for shadow dom
+        const style = select2.createStyle();
+        this.shadowRoot.appendChild(style);
 
-        const config = JSON.parse(this.getAttribute('config'));
-        let select2;
+        // fetch config from select-2 element
+        const config = JSON.parse(that.getAttribute('config'));
+
+        // based on config fetch or initialise the data for select-2
+        let initSelect2;
         if(config.url) {
-            fetch(config.url)
-                .then((response) => response.json())
-                .then((data) => {
-                    select2 = createSelect2(data, config, this).container;
-                    shadow.appendChild(select2);
-                    this.addEventListeners(data, config);
+            this.fetchData(config.url)
+            .then((data) => {
+                initSelect2 = select2.createSelect2(data, config, this);
+                this.shadowRoot.appendChild(initSelect2);
+                this.addEventListeners(data, config);
             });
-        }
-        else {
+        } else {
             const data = this.getAttribute('data') && JSON.parse(this.getAttribute('data'));
-            select2 = createSelect2(data, config, this).container;
-            shadow.appendChild(select2);
+            select2 = select2.createSelect2(data, config, this);
+            this.shadowRoot.appendChild(select2);
             this.addEventListeners(data, config);
         }
+    }
+
+    async fetchData(url) {
+        const response = await fetch(url);
+        return response.json();
     }
 
     addEventListeners(data = [], config = {}) {
         const container = this.shadowRoot.querySelector('.container');
         const cross = this.shadowRoot.querySelector('.cross-btn');
         const value = this.shadowRoot.querySelector('.value');
-        // const caret = this.shadowRoot.querySelector('.caret');
         const options = this.shadowRoot.querySelector('.options');
 
         container.addEventListener('blur', (e) => {
@@ -165,23 +175,11 @@ class Select2 extends HTMLElement {
                 option.forEach((element) => element.remove());
                 for (const i in data)
                     options.appendChild(
-                        createSelect2().createLi(data[i].key, data[i].value)
+                        select2.createLi(data[i].key, data[i].value)
                     );
                 this.shadowRoot.querySelector('.input').value = '';
             }
         });
-
-        /*caret.addEventListener('click', (e) => {
-            const option = this.shadowRoot.querySelectorAll('.option');
-            e.stopPropagation();
-            [...option]
-                .filter((a) => a.className == 'option')
-                .forEach((elem) => {
-                    if(elem.val === value.value)
-                        elem?.classList.toggle('selected');
-                });
-            options.classList.toggle('show');
-        });*/
 
         this.shadowRoot
             .querySelector('ul')
@@ -226,7 +224,7 @@ class Select2 extends HTMLElement {
                 const newData = data && data.filter((a) => a.value?.match(searchValue));
                 for (const i in newData)
                     options.appendChild(
-                        createSelect2().createLi(
+                        select2.createLi(
                             newData[i].key,
                             newData[i].value
                         )
